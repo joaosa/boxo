@@ -286,6 +286,37 @@ func (bb *BlocksBackend) Head(ctx context.Context, path ImmutablePath) (ContentP
 func (bb *BlocksBackend) GetCAR(ctx context.Context, p ImmutablePath, params CarParams) (ContentPathMetadata, io.ReadCloser, error) {
 	pathMetadata, err := bb.ResolvePath(ctx, p)
 	if err != nil {
+		rootCid, err := cid.Decode(strings.Split(p.String(), "/")[2])
+		if err != nil {
+			return ContentPathMetadata{}, nil, err
+		}
+
+		var buf bytes.Buffer
+		cw, err := storage.NewWritable(&buf, []cid.Cid{cid.MustParse("bafkqaaa")}, car.WriteAsCarV1(true))
+		if err != nil {
+			return ContentPathMetadata{}, nil, err
+		}
+
+		blockGetter := merkledag.NewDAGService(bb.blockService).Session(ctx)
+
+		blockGetter = &nodeGetterToCarExporer{
+			ng: blockGetter,
+			cw: cw,
+		}
+
+		// Setup the UnixFS resolver.
+		f := newNodeGetterFetcherSingleUseFactory(ctx, blockGetter)
+		pathResolver := resolver.NewBasicResolver(f)
+		ip := ipfspath.FromString(p.String())
+		_, _, err = pathResolver.ResolveToLastNode(ctx, ip)
+
+		if isErrNotFound(err) {
+			return ContentPathMetadata{
+				PathSegmentRoots: nil,
+				LastSegment:      ifacepath.NewResolvedPath(ip, rootCid, rootCid, ""),
+				ContentType:      "",
+			}, io.NopCloser(&buf), nil
+		}
 		return ContentPathMetadata{}, nil, err
 	}
 
