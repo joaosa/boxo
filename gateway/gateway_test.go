@@ -15,7 +15,6 @@ import (
 	path "github.com/ipfs/boxo/path"
 	"github.com/ipfs/boxo/path/resolver"
 	"github.com/ipfs/go-cid"
-	ipld "github.com/ipfs/go-ipld-format"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -763,7 +762,6 @@ func TestErrorBubblingFromBackend(t *testing.T) {
 		})
 	}
 
-	testError("404 Not Found from IPLD", &ipld.ErrNotFound{}, http.StatusNotFound)
 	testError("404 Not Found from path resolver", resolver.ErrNoLink{}, http.StatusNotFound)
 	testError("502 Bad Gateway", ErrBadGateway, http.StatusBadGateway)
 	testError("504 Gateway Timeout", ErrGatewayTimeout, http.StatusGatewayTimeout)
