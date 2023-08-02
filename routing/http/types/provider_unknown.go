@@ -6,8 +6,6 @@ import (
 	"github.com/ipfs/boxo/routing/http/internal/drjson"
 )
 
-var _ ReadProviderRecord = &UnknownProviderRecord{}
-var _ WriteProviderRecord = &UnknownProviderRecord{}
 var _ ProviderResponse = &UnknownProviderRecord{}
 
 // UnknownProviderRecord is used when we cannot parse the provider record using `GetProtocol`
@@ -26,7 +24,6 @@ func (u *UnknownProviderRecord) GetSchema() string {
 }
 
 func (u *UnknownProviderRecord) IsReadProviderRecord() {}
-func (u UnknownProviderRecord) IsWriteProviderRecord() {}
 
 func (u *UnknownProviderRecord) UnmarshalJSON(b []byte) error {
 	m := map[string]interface{}{}

@@ -10,13 +10,10 @@ import (
 	"mime"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/benbjohnson/clock"
 	ipns "github.com/ipfs/boxo/ipns"
 	"github.com/ipfs/boxo/routing/http/contentrouter"
-	"github.com/ipfs/boxo/routing/http/internal/drjson"
-	"github.com/ipfs/boxo/routing/http/server"
 	"github.com/ipfs/boxo/routing/http/types"
 	"github.com/ipfs/boxo/routing/http/types/iter"
 	jsontypes "github.com/ipfs/boxo/routing/http/types/json"
@@ -58,10 +55,6 @@ type client struct {
 	peerID   peer.ID
 	addrs    []types.Multiaddr
 	identity crypto.PrivKey
-
-	// called immeidately after signing a provide req
-	// used for testing, e.g. testing the server with a mangled signature
-	afterSignCallback func(req *types.WriteBitswapProviderRecord)
 }
 
 // defaultUserAgent is used as a fallback to inform HTTP server which library
@@ -168,7 +161,7 @@ func (c *client) FindProviders(ctx context.Context, key cid.Cid) (provs iter.Res
 	// TODO test measurements
 	m := newMeasurement("FindProviders")
 
-	url := c.baseURL + server.ProvidePath + key.String()
+	url := c.baseURL + "/routing/v1/providers/" + key.String()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -223,7 +216,7 @@ func (c *client) FindProviders(ctx context.Context, key cid.Cid) (provs iter.Res
 	var it iter.ResultIter[types.ProviderResponse]
 	switch mediaType {
 	case mediaTypeJSON:
-		parsedResp := &jsontypes.ReadProvidersResponse{}
+		parsedResp := &jsontypes.ProvidersResponse{}
 		err = json.NewDecoder(resp.Body).Decode(parsedResp)
 		var sliceIt iter.Iter[types.ProviderResponse] = iter.FromSlice(parsedResp.Providers)
 		it = iter.ToResultIter(sliceIt)
@@ -236,95 +229,6 @@ func (c *client) FindProviders(ctx context.Context, key cid.Cid) (provs iter.Res
 	}
 
 	return &measuringIter[iter.Result[types.ProviderResponse]]{Iter: it, ctx: ctx, m: m}, nil
-}
-
-func (c *client) ProvideBitswap(ctx context.Context, keys []cid.Cid, ttl time.Duration) (time.Duration, error) {
-	if c.identity == nil {
-		return 0, errors.New("cannot provide Bitswap records without an identity")
-	}
-	if c.peerID.Size() == 0 {
-		return 0, errors.New("cannot provide Bitswap records without a peer ID")
-	}
-
-	ks := make([]types.CID, len(keys))
-	for i, c := range keys {
-		ks[i] = types.CID{Cid: c}
-	}
-
-	now := c.clock.Now()
-
-	req := types.WriteBitswapProviderRecord{
-		Protocol: "transport-bitswap",
-		Schema:   types.SchemaBitswap,
-		Payload: types.BitswapPayload{
-			Keys:        ks,
-			AdvisoryTTL: &types.Duration{Duration: ttl},
-			Timestamp:   &types.Time{Time: now},
-			ID:          &c.peerID,
-			Addrs:       c.addrs,
-		},
-	}
-	err := req.Sign(c.peerID, c.identity)
-	if err != nil {
-		return 0, err
-	}
-
-	if c.afterSignCallback != nil {
-		c.afterSignCallback(&req)
-	}
-
-	advisoryTTL, err := c.provideSignedBitswapRecord(ctx, &req)
-	if err != nil {
-		return 0, err
-	}
-
-	return advisoryTTL, err
-}
-
-// ProvideAsync makes a provide request to a delegated router
-func (c *client) provideSignedBitswapRecord(ctx context.Context, bswp *types.WriteBitswapProviderRecord) (time.Duration, error) {
-	req := jsontypes.WriteProvidersRequest{Providers: []types.WriteProviderRecord{bswp}}
-
-	url := c.baseURL + server.ProvidePath
-
-	b, err := drjson.MarshalJSONBytes(req)
-	if err != nil {
-		return 0, err
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPut, url, bytes.NewBuffer(b))
-	if err != nil {
-		return 0, err
-	}
-
-	resp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		return 0, fmt.Errorf("making HTTP req to provide a signed record: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return 0, httpError(resp.StatusCode, resp.Body)
-	}
-	var provideResult jsontypes.WriteProvidersResponse
-	err = json.NewDecoder(resp.Body).Decode(&provideResult)
-	if err != nil {
-		return 0, err
-	}
-	if len(provideResult.ProvideResults) != 1 {
-		return 0, fmt.Errorf("expected 1 result but got %d", len(provideResult.ProvideResults))
-	}
-
-	v, ok := provideResult.ProvideResults[0].(*types.WriteBitswapProviderRecordResponse)
-	if !ok {
-		return 0, fmt.Errorf("expected AdvisoryTTL field")
-	}
-
-	if v.AdvisoryTTL != nil {
-		return v.AdvisoryTTL.Duration, nil
-	}
-
-	return 0, nil
 }
 
 func (c *client) FindIPNSRecord(ctx context.Context, name ipns.Name) (*ipns.Record, error) {
