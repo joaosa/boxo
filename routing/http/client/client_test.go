@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -29,9 +30,9 @@ import (
 
 type mockContentRouter struct{ mock.Mock }
 
-func (m *mockContentRouter) FindProviders(ctx context.Context, key cid.Cid, limit int) (iter.ResultIter[types.ProviderResponse], error) {
+func (m *mockContentRouter) FindProviders(ctx context.Context, key cid.Cid, limit int) (iter.ResultIter[types.Record], error) {
 	args := m.Called(ctx, key, limit)
-	return args.Get(0).(iter.ResultIter[types.ProviderResponse]), args.Error(1)
+	return args.Get(0).(iter.ResultIter[types.Record]), args.Error(1)
 }
 
 func (m *mockContentRouter) FindIPNSRecord(ctx context.Context, name ipns.Name) (*ipns.Record, error) {
@@ -139,13 +140,14 @@ func addrsToDRAddrs(addrs []multiaddr.Multiaddr) (drmas []types.Multiaddr) {
 	return
 }
 
-func makeBSReadProviderResp() types.ReadBitswapProviderRecord {
+func makeBSReadProviderResp() types.PeerRecord {
 	peerID, addrs, _ := makeProviderAndIdentity()
-	return types.ReadBitswapProviderRecord{
-		Protocol: "transport-bitswap",
-		Schema:   types.SchemaBitswap,
-		ID:       &peerID,
-		Addrs:    addrsToDRAddrs(addrs),
+	return types.PeerRecord{
+		Schema:    types.SchemaPeer,
+		ID:        &peerID,
+		Protocols: []string{"transport-bitswap"},
+		Addrs:     addrsToDRAddrs(addrs),
+		Extra:     map[string]json.RawMessage{},
 	}
 }
 
@@ -190,7 +192,7 @@ func (e *osErrContains) errContains(t *testing.T, err error) {
 
 func TestClient_FindProviders(t *testing.T) {
 	bsReadProvResp := makeBSReadProviderResp()
-	bitswapProvs := []iter.Result[types.ProviderResponse]{
+	bitswapProvs := []iter.Result[types.Record]{
 		{Val: &bsReadProvResp},
 	}
 
@@ -198,13 +200,13 @@ func TestClient_FindProviders(t *testing.T) {
 		name                    string
 		httpStatusCode          int
 		stopServer              bool
-		routerProvs             []iter.Result[types.ProviderResponse]
+		routerProvs             []iter.Result[types.Record]
 		routerErr               error
 		clientRequiresStreaming bool
 		serverStreamingDisabled bool
 
 		expErrContains       osErrContains
-		expProvs             []iter.Result[types.ProviderResponse]
+		expProvs             []iter.Result[types.Record]
 		expStreamingResponse bool
 		expJSONResponse      bool
 	}{
@@ -308,7 +310,7 @@ func TestClient_FindProviders(t *testing.T) {
 
 			c.expErrContains.errContains(t, err)
 
-			provs := iter.ReadAll[iter.Result[types.ProviderResponse]](provsIter)
+			provs := iter.ReadAll[iter.Result[types.Record]](provsIter)
 			assert.Equal(t, c.expProvs, provs)
 		})
 	}

@@ -28,10 +28,10 @@ func TestHeaders(t *testing.T) {
 	t.Cleanup(server.Close)
 	serverAddr := "http://" + server.Listener.Addr().String()
 
-	results := iter.FromSlice([]iter.Result[types.ProviderResponse]{
-		{Val: &types.ReadBitswapProviderRecord{
-			Protocol: "transport-bitswap",
-			Schema:   types.SchemaBitswap,
+	results := iter.FromSlice([]iter.Result[types.Record]{
+		{Val: &types.PeerRecord{
+			Schema:    types.SchemaPeer,
+			Protocols: []string{"transport-bitswap"},
 		}}},
 	)
 
@@ -72,18 +72,18 @@ func TestResponse(t *testing.T) {
 	runTest := func(t *testing.T, contentType string, expectedStream bool, expectedBody string) {
 		t.Parallel()
 
-		results := iter.FromSlice([]iter.Result[types.ProviderResponse]{
-			{Val: &types.ReadBitswapProviderRecord{
-				Protocol: "transport-bitswap",
-				Schema:   types.SchemaBitswap,
-				ID:       &pid,
-				Addrs:    []types.Multiaddr{},
+		results := iter.FromSlice([]iter.Result[types.Record]{
+			{Val: &types.PeerRecord{
+				Schema:    types.SchemaPeer,
+				ID:        &pid,
+				Protocols: []string{"transport-bitswap"},
+				Addrs:     []types.Multiaddr{},
 			}},
-			{Val: &types.ReadBitswapProviderRecord{
-				Protocol: "transport-bitswap",
-				Schema:   types.SchemaBitswap,
-				ID:       &pid2,
-				Addrs:    []types.Multiaddr{},
+			{Val: &types.PeerRecord{
+				Schema:    types.SchemaPeer,
+				ID:        &pid2,
+				Protocols: []string{"transport-bitswap"},
+				Addrs:     []types.Multiaddr{},
 			}}},
 		)
 
@@ -111,15 +111,15 @@ func TestResponse(t *testing.T) {
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 
-		require.Equal(t, string(body), expectedBody)
+		require.Equal(t, expectedBody, string(body))
 	}
 
 	t.Run("JSON Response", func(t *testing.T) {
-		runTest(t, mediaTypeJSON, false, `{"Providers":[{"Protocol":"transport-bitswap","Schema":"bitswap","ID":"12D3KooWM8sovaEGU1bmiWGWAzvs47DEcXKZZTuJnpQyVTkRs2Vn","Addrs":[]},{"Protocol":"transport-bitswap","Schema":"bitswap","ID":"12D3KooWM8sovaEGU1bmiWGWAzvs47DEcXKZZTuJnpQyVTkRs2Vz","Addrs":[]}]}`)
+		runTest(t, mediaTypeJSON, false, `{"Providers":[{"Addrs":[],"ID":"12D3KooWM8sovaEGU1bmiWGWAzvs47DEcXKZZTuJnpQyVTkRs2Vn","Protocols":["transport-bitswap"],"Schema":"peer"},{"Addrs":[],"ID":"12D3KooWM8sovaEGU1bmiWGWAzvs47DEcXKZZTuJnpQyVTkRs2Vz","Protocols":["transport-bitswap"],"Schema":"peer"}]}`)
 	})
 
 	t.Run("NDJSON Response", func(t *testing.T) {
-		runTest(t, mediaTypeNDJSON, true, `{"Protocol":"transport-bitswap","Schema":"bitswap","ID":"12D3KooWM8sovaEGU1bmiWGWAzvs47DEcXKZZTuJnpQyVTkRs2Vn","Addrs":[]}`+"\n"+`{"Protocol":"transport-bitswap","Schema":"bitswap","ID":"12D3KooWM8sovaEGU1bmiWGWAzvs47DEcXKZZTuJnpQyVTkRs2Vz","Addrs":[]}`+"\n")
+		runTest(t, mediaTypeNDJSON, true, `{"Addrs":[],"ID":"12D3KooWM8sovaEGU1bmiWGWAzvs47DEcXKZZTuJnpQyVTkRs2Vn","Protocols":["transport-bitswap"],"Schema":"peer"}`+"\n"+`{"Addrs":[],"ID":"12D3KooWM8sovaEGU1bmiWGWAzvs47DEcXKZZTuJnpQyVTkRs2Vz","Protocols":["transport-bitswap"],"Schema":"peer"}`+"\n")
 	})
 }
 
@@ -257,9 +257,9 @@ func TestIPNS(t *testing.T) {
 
 type mockContentRouter struct{ mock.Mock }
 
-func (m *mockContentRouter) FindProviders(ctx context.Context, key cid.Cid, limit int) (iter.ResultIter[types.ProviderResponse], error) {
+func (m *mockContentRouter) FindProviders(ctx context.Context, key cid.Cid, limit int) (iter.ResultIter[types.Record], error) {
 	args := m.Called(ctx, key, limit)
-	return args.Get(0).(iter.ResultIter[types.ProviderResponse]), args.Error(1)
+	return args.Get(0).(iter.ResultIter[types.Record]), args.Error(1)
 }
 
 func (m *mockContentRouter) FindIPNSRecord(ctx context.Context, name ipns.Name) (*ipns.Record, error) {
