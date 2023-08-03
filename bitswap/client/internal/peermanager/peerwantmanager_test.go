@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/ipfs/boxo/bitswap/internal/testutil"
-	"github.com/ipfs/boxo/internal/test"
 	cid "github.com/ipfs/go-cid"
 	peer "github.com/libp2p/go-libp2p/core/peer"
 )
@@ -57,8 +56,6 @@ func clearSent(pqs map[peer.ID]PeerQueue) {
 }
 
 func TestEmpty(t *testing.T) {
-	test.Flaky(t)
-
 	pwm := newPeerWantManager(&gauge{}, &gauge{})
 
 	if len(pwm.getWantBlocks()) > 0 {
@@ -70,8 +67,6 @@ func TestEmpty(t *testing.T) {
 }
 
 func TestPWMBroadcastWantHaves(t *testing.T) {
-	test.Flaky(t)
-
 	pwm := newPeerWantManager(&gauge{}, &gauge{})
 
 	peers := testutil.GeneratePeers(3)
@@ -184,8 +179,6 @@ func TestPWMBroadcastWantHaves(t *testing.T) {
 }
 
 func TestPWMSendWants(t *testing.T) {
-	test.Flaky(t)
-
 	pwm := newPeerWantManager(&gauge{}, &gauge{})
 
 	peers := testutil.GeneratePeers(2)
@@ -266,8 +259,6 @@ func TestPWMSendWants(t *testing.T) {
 }
 
 func TestPWMSendCancels(t *testing.T) {
-	test.Flaky(t)
-
 	pwm := newPeerWantManager(&gauge{}, &gauge{})
 
 	peers := testutil.GeneratePeers(2)
@@ -346,8 +337,6 @@ func TestPWMSendCancels(t *testing.T) {
 }
 
 func TestStats(t *testing.T) {
-	test.Flaky(t)
-
 	g := &gauge{}
 	wbg := &gauge{}
 	pwm := newPeerWantManager(g, wbg)
@@ -449,8 +438,6 @@ func TestStats(t *testing.T) {
 }
 
 func TestStatsOverlappingWantBlockWantHave(t *testing.T) {
-	test.Flaky(t)
-
 	g := &gauge{}
 	wbg := &gauge{}
 	pwm := newPeerWantManager(g, wbg)
@@ -490,8 +477,6 @@ func TestStatsOverlappingWantBlockWantHave(t *testing.T) {
 }
 
 func TestStatsRemovePeerOverlappingWantBlockWantHave(t *testing.T) {
-	test.Flaky(t)
-
 	g := &gauge{}
 	wbg := &gauge{}
 	pwm := newPeerWantManager(g, wbg)

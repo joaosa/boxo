@@ -12,7 +12,6 @@ import (
 	bssim "github.com/ipfs/boxo/bitswap/client/internal/sessioninterestmanager"
 	bsspm "github.com/ipfs/boxo/bitswap/client/internal/sessionpeermanager"
 	"github.com/ipfs/boxo/bitswap/internal/testutil"
-	"github.com/ipfs/boxo/internal/test"
 	cid "github.com/ipfs/go-cid"
 	blocksutil "github.com/ipfs/go-ipfs-blocksutil"
 	delay "github.com/ipfs/go-ipfs-delay"
@@ -149,8 +148,6 @@ func (pm *fakePeerManager) BroadcastWantHaves(ctx context.Context, cids []cid.Ci
 func (pm *fakePeerManager) SendCancels(ctx context.Context, cancels []cid.Cid) {}
 
 func TestSessionGetBlocks(t *testing.T) {
-	test.Flaky(t)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	fpm := newFakePeerManager()
 	fspm := newFakeSessionPeerManager()
@@ -246,8 +243,6 @@ func TestSessionGetBlocks(t *testing.T) {
 }
 
 func TestSessionFindMorePeers(t *testing.T) {
-	test.Flaky(t)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
 	defer cancel()
 	fpm := newFakePeerManager()
@@ -322,8 +317,6 @@ func TestSessionFindMorePeers(t *testing.T) {
 }
 
 func TestSessionOnPeersExhausted(t *testing.T) {
-	test.Flaky(t)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	fpm := newFakePeerManager()
@@ -370,8 +363,6 @@ func TestSessionOnPeersExhausted(t *testing.T) {
 }
 
 func TestSessionFailingToGetFirstBlock(t *testing.T) {
-	test.Flaky(t)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	fpm := newFakePeerManager()
@@ -487,8 +478,6 @@ func TestSessionFailingToGetFirstBlock(t *testing.T) {
 }
 
 func TestSessionCtxCancelClosesGetBlocksChannel(t *testing.T) {
-	test.Flaky(t)
-
 	fpm := newFakePeerManager()
 	fspm := newFakeSessionPeerManager()
 	fpf := newFakeProviderFinder()
@@ -539,8 +528,6 @@ func TestSessionCtxCancelClosesGetBlocksChannel(t *testing.T) {
 }
 
 func TestSessionOnShutdownCalled(t *testing.T) {
-	test.Flaky(t)
-
 	fpm := newFakePeerManager()
 	fspm := newFakeSessionPeerManager()
 	fpf := newFakeProviderFinder()
@@ -568,8 +555,6 @@ func TestSessionOnShutdownCalled(t *testing.T) {
 }
 
 func TestSessionReceiveMessageAfterCtxCancel(t *testing.T) {
-	test.Flaky(t)
-
 	ctx, cancelCtx := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	fpm := newFakePeerManager()
 	fspm := newFakeSessionPeerManager()
